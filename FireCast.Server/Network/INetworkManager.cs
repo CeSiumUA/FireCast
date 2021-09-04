@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace FireCast.Server.Network
 {
-    public interface INetworkManager
+    public interface INetworkManager : IDisposable
     {
         public Task SendImage(byte[] bytesToSend);
     }
