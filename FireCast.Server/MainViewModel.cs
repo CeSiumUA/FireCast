@@ -15,7 +15,7 @@ namespace FireCast.Server
         public MainViewModel()
         {
             this._graphicsProvider = new WindowsGraphicsProvider();
-            this._networkManager = new UserDatagramSenderManager();
+            this._networkManager = new UserDatagramSenderManager("127.0.0.1", 1488);
         }
         public async Task CaptureScreen()
         {

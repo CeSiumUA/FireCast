@@ -18,7 +18,7 @@ namespace FireCast.Server.Network
         public UserDatagramSenderManager(string address, int port)
         {
             this._random = new Random();
-            this._sender = new UdpClient(address, port);
+            this._sender = new UdpClient();
             this._iPEndPoint = new IPEndPoint(IPAddress.Parse(address), port);
             this._sender.Connect(_iPEndPoint);
         }

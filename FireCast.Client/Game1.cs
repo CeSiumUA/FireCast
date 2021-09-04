@@ -1,6 +1,11 @@
-﻿using Microsoft.Xna.Framework;
+﻿using FireCast.Client.Network;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace FireCast.Client
 {
@@ -8,16 +13,26 @@ namespace FireCast.Client
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-
+        private readonly INetworkReceiver _receiver;
+        Queue<Frame> framesQuery = new Queue<Frame>();
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            _receiver = new UdpReceiver("127.0.0.1", 1488);
         }
 
         protected override void Initialize()
         {
+            new Task(async () => await _receiver.StartReceiverAsync()).Start();
+            _receiver.OnFramesComposed += (sender, args) =>
+            {
+                foreach(var  frame in args)
+                {
+                    framesQuery.Enqueue(frame);
+                }
+            };
             base.Initialize();
         }
 
@@ -42,9 +57,33 @@ namespace FireCast.Client
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            if (framesQuery.Count > 0)
+            {
+                var renderFrame = this.framesQuery.Dequeue();
+
+                var texture = CreateTexture(renderFrame);
+
+                _spriteBatch.Begin();
+
+                _spriteBatch.Draw(texture,
+                    new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
+                    new Rectangle(0, 0, texture.Width, texture.Height),
+                    Color.White);
+
+                _spriteBatch.End();
+            }
 
             base.Draw(gameTime);
+        }
+
+        private Texture2D CreateTexture(Frame frame)
+        {
+            var chunks = frame.PackageChunks.OrderBy(x => x.Order);
+            byte[] image = new byte[chunks.Sum(x => x.Data.Length)];
+            using (MemoryStream memoryStream = new MemoryStream(image))
+            {
+                return Texture2D.FromStream(this.GraphicsDevice, memoryStream);
+            }
         }
     }
 }

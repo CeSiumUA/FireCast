@@ -12,6 +12,9 @@ namespace FireCast.Client.Network
     {
         private readonly UdpClient _udpClient;
         private readonly List<Frame> _frames;
+
+        public event EventHandler<IEnumerable<Frame>> OnFramesComposed;
+
         public UdpReceiver(string ipAddress, int port)
         {
             this._udpClient = new UdpClient(ipAddress, port);
@@ -102,7 +105,8 @@ namespace FireCast.Client.Network
         }
         private void CheckFrameComplicity(Frame frame)
         {
-
+            var completedPackages = this._frames.Where(x => x.IsFrameComplete());
+            this?.OnFramesComposed.Invoke(this, completedPackages);
         }
     }
 }
