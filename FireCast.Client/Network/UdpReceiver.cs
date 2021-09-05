@@ -14,11 +14,13 @@ namespace FireCast.Client.Network
         private readonly List<Frame> _frames;
         private object _lock = new object();
         public event EventHandler<IEnumerable<Frame>> OnFramesComposed;
+        private readonly Queue<byte[]> receivedBytes;
 
         public UdpReceiver(string ipAddress, int port)
         {
             this._udpClient = new UdpClient(port);
             this._frames = new List<Frame>();
+            this.receivedBytes = new Queue<byte[]>();
         }
         public void Dispose()
         {
@@ -28,23 +30,30 @@ namespace FireCast.Client.Network
 
         public async Task StartReceiverAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            new Task(() =>
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    if (receivedBytes.Count > 0)
+                    {
+                        byte[] buffer = receivedBytes.Dequeue();
+                        Frame frame;
+                        if (buffer.Length == 3)
+                        {
+                            frame = ProcessHeaderPackage(buffer);
+                        }
+                        else
+                        {
+                            frame = ProcessPayloadPackage(buffer);
+                        }
+                        CheckFrameComplicity(frame);
+                    }
+                }
+            }).Start();
             while (!cancellationToken.IsCancellationRequested)
             {
                 var udpResult = await this._udpClient.ReceiveAsync();
-                new Task(() =>
-                {
-                    byte[] buffer = udpResult.Buffer;
-                    Frame frame;
-                    if (buffer.Length == 3)
-                    {
-                        frame = ProcessHeaderPackage(buffer);
-                    }
-                    else
-                    {
-                        frame = ProcessPayloadPackage(buffer);
-                    }
-                    CheckFrameComplicity(frame);
-                }).Start();
+                this.receivedBytes.Enqueue(udpResult.Buffer); 
             }
         }
         private Frame ProcessPayloadPackage(byte[] buffer)
