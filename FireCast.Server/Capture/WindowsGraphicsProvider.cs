@@ -52,7 +52,7 @@ namespace FireCast.Server.Capture
             {
                 if (bitImage == null || graphics == null) Initialize();
                 graphics?.CopyFromScreen(0, 0, 0, 0, new Size(this.Width, this.Height));
-                bitImage?.Save(ms, ImageFormat.Jpeg);
+                bitImage?.Save(ms, ImageFormat.Png);
                 return ms.ToArray();
             }
         }

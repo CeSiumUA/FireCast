@@ -20,21 +20,27 @@ namespace FireCast.Client
         private SpriteBatch _spriteBatch;
         private readonly INetworkReceiver _receiver;
         private Frame activeFrame;
+        private FrameBuffer FrameBuffer;
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            FrameBuffer = new FrameBuffer();
             _receiver = new UdpReceiver("127.0.0.1", 1488);
         }
 
         protected override void Initialize()
         {
-            new Task(async () => await _receiver.StartReceiverAsync()).Start();
-            _receiver.OnFrameComposed += (sender, args) =>
+            new Task(async () =>
             {
-                activeFrame = args;
-            };
+                while (true)
+                {
+                    var bytes = await _receiver.ReceiveNextPackage();
+                    FrameBuffer.AddToBufferQueue(bytes);
+                }
+            }).Start();
+
             this.Window.AllowUserResizing = true;
             base.Initialize();
         }
@@ -51,7 +57,7 @@ namespace FireCast.Client
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
+            this.Window.Title = FrameBuffer.GetBufferLength().ToString();
 
             base.Update(gameTime);
         }
@@ -59,7 +65,11 @@ namespace FireCast.Client
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-
+            var newFrame = FrameBuffer.ProcessBuffer();
+            if(newFrame != null)
+            {
+                activeFrame = newFrame;
+            }
             if (activeFrame != null)
             {
                 var texture = CreateTexture(activeFrame);
@@ -87,19 +97,9 @@ namespace FireCast.Client
                 Array.Copy(chunk.Data, 0, image, lastIndex, chunk.Data.Length);
                 lastIndex += chunk.Data.Length;
             }
-            Bitmap bitmap;
-            MemoryStream memoryStream = new MemoryStream(image);
-            try
-            {
-                bitmap = (Bitmap)Bitmap.FromStream(memoryStream);
-                memoryStream = new MemoryStream();
-                bitmap.Save(memoryStream, ImageFormat.Png);
-                return Texture2D.FromStream(_graphics.GraphicsDevice, memoryStream);
-            }
-            finally
-            {
-                memoryStream.Dispose();
-            }
+            Texture2D texture2D = new Texture2D(this.GraphicsDevice, 2560, 1080);
+            texture2D.SetData(image);
+            return texture2D;
         }
     }
 }
