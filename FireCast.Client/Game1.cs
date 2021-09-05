@@ -19,7 +19,7 @@ namespace FireCast.Client
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private readonly INetworkReceiver _receiver;
-        Queue<Frame> framesQuery = new Queue<Frame>();
+        private Frame activeFrame;
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -31,12 +31,9 @@ namespace FireCast.Client
         protected override void Initialize()
         {
             new Task(async () => await _receiver.StartReceiverAsync()).Start();
-            _receiver.OnFramesComposed += (sender, args) =>
+            _receiver.OnFrameComposed += (sender, args) =>
             {
-                foreach(var  frame in args)
-                {
-                    framesQuery.Enqueue(frame);
-                }
+                activeFrame = args;
             };
             this.Window.AllowUserResizing = true;
             base.Initialize();
@@ -63,16 +60,14 @@ namespace FireCast.Client
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            if (framesQuery.Count > 0)
+            if (activeFrame != null)
             {
-                var renderFrame = this.framesQuery.Dequeue();
-
-                var texture = CreateTexture(renderFrame);
+                var texture = CreateTexture(activeFrame);
 
                 _spriteBatch.Begin();
 
                 _spriteBatch.Draw(texture,
-                    new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
+                    new Rectangle(0, 0, _graphics.GraphicsDevice.Viewport.Width, _graphics.GraphicsDevice.Viewport.Height),
                     new Rectangle(0, 0, texture.Width, texture.Height),
                     Color.White);
 

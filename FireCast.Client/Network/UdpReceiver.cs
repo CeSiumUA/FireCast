@@ -11,15 +11,12 @@ namespace FireCast.Client.Network
     public class UdpReceiver : INetworkReceiver
     {
         private readonly UdpClient _udpClient;
-        private readonly List<Frame> _frames;
-        private object _lock = new object();
-        public event EventHandler<IEnumerable<Frame>> OnFramesComposed;
+        public event EventHandler<Frame> OnFrameComposed;
         private readonly Queue<byte[]> receivedBytes;
-
+        private Frame Frame;
         public UdpReceiver(string ipAddress, int port)
         {
             this._udpClient = new UdpClient(port);
-            this._frames = new List<Frame>();
             this.receivedBytes = new Queue<byte[]>();
         }
         public void Dispose()
@@ -30,6 +27,7 @@ namespace FireCast.Client.Network
 
         public async Task StartReceiverAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
+            Frame = new Frame();
             new Task(() =>
             {
                 while (!cancellationToken.IsCancellationRequested)
@@ -37,114 +35,83 @@ namespace FireCast.Client.Network
                     if (receivedBytes.Count > 0)
                     {
                         byte[] buffer = receivedBytes.Dequeue();
-                        Frame frame;
                         if (buffer.Length == 3)
                         {
-                            frame = ProcessHeaderPackage(buffer);
+                            ProcessHeaderPackage(buffer);
                         }
                         else
                         {
-                            frame = ProcessPayloadPackage(buffer);
+                            ProcessPayloadPackage(buffer);
                         }
-                        CheckFrameComplicity(frame);
+                        CheckFrameComplicity();
                     }
                 }
             }).Start();
             while (!cancellationToken.IsCancellationRequested)
             {
                 var udpResult = await this._udpClient.ReceiveAsync();
+                if(udpResult.Buffer == null)
+                {
+
+                }
                 this.receivedBytes.Enqueue(udpResult.Buffer); 
             }
         }
-        private Frame ProcessPayloadPackage(byte[] buffer)
+        private void ProcessPayloadPackage(byte[] buffer)
         {
-            var packageOrder = buffer[0];
-            Frame existingFrame;
-            lock (_lock)
-            {
-                existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
-            }
-            bool existsInCollection = existingFrame != null;
-            if (!existsInCollection)
-            {
-                existingFrame = new Frame();
-                existingFrame.Signarute = new byte[2];
-                existingFrame.Signarute[0] = buffer[1];
-                existingFrame.Signarute[1] = buffer[2];
-            }
+            CheckFrameSignature(buffer);
 
             byte[] payload = new byte[buffer.Length - 3];
 
             Array.Copy(buffer, 3, payload, 0, payload.Length);
 
-            existingFrame.PackageChunks.Add(new Chunk()
+            Frame.PackageChunks.Add(new Chunk()
             {
                 Order = buffer[0],
                 Data = payload
             });
 
-            if (!existsInCollection)
-            {
-                lock (_lock)
-                {
-                    this._frames.Add(existingFrame);
-                }
-            }
-            return existingFrame;
         }
-        private Frame ProcessHeaderPackage(byte[] buffer)
+        private void ProcessHeaderPackage(byte[] buffer)
         {
-            Frame existingFrame;
-
-            lock (_lock)
+            CheckFrameSignature(buffer);
+            
+            if(buffer[0] != 0)
             {
-                existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
-            }
-            bool existsInCollection = existingFrame != null;
-            if (!existsInCollection)
-            {
-                existingFrame = new Frame();
-                existingFrame.Signarute = new byte[2];
-                existingFrame.Signarute[0] = buffer[1];
-                existingFrame.Signarute[1] = buffer[2];
-            }
-
-            byte chunks = buffer[0];
-
-            if(chunks == 0)
-            {
-                existingFrame.Tail = buffer;
+                Frame.Chunks = buffer[0];
+                Frame.Header = buffer;
             }
             else
             {
-                existingFrame.Header = buffer;
-                existingFrame.Chunks = chunks;
+                Frame.Tail = buffer;
             }
-
-            if (!existsInCollection)
-            {
-                lock (_lock)
-                {
-                    this._frames.Add(existingFrame);
-                }
-            }
-            return existingFrame;
         }
-        private void CheckFrameComplicity(Frame frame)
+        private void CheckFrameSignature(byte[] buffer)
         {
-            List<Frame> completedPackages;
-            lock (_lock)
+            if (Frame.Signarute == null)
             {
-                completedPackages = this._frames.Where(x => x.IsFrameComplete()).ToList();
+                Frame.Signarute = new byte[2];
+                Frame.Signarute[0] = buffer[1];
+                Frame.Signarute[1] = buffer[2];
             }
-            foreach(var pckg in completedPackages)
+            else
             {
-                lock (_lock)
+                if (Frame.Signarute[0] != buffer[1] || Frame.Signarute[1] != buffer[2])
                 {
-                    _frames.Remove(pckg);
+                    this.Frame = new Frame();
+                    Frame.Signarute = new byte[2];
+                    Frame.Signarute[0] = buffer[1];
+                    Frame.Signarute[1] = buffer[2];
                 }
             }
-            this?.OnFramesComposed.Invoke(this, completedPackages);
+        }
+        private void CheckFrameComplicity()
+        {
+            if (Frame.IsFrameComplete())
+            {
+                this?.OnFrameComposed.Invoke(this, Frame);
+                Frame = new Frame();
+            }
         }
     }
 }
