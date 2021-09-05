@@ -12,12 +12,12 @@ namespace FireCast.Client.Network
     {
         private readonly UdpClient _udpClient;
         private readonly List<Frame> _frames;
-
+        private object _lock = new object();
         public event EventHandler<IEnumerable<Frame>> OnFramesComposed;
 
         public UdpReceiver(string ipAddress, int port)
         {
-            this._udpClient = new UdpClient(ipAddress, port);
+            this._udpClient = new UdpClient(port);
             this._frames = new List<Frame>();
         }
         public void Dispose()
@@ -31,23 +31,30 @@ namespace FireCast.Client.Network
             while (!cancellationToken.IsCancellationRequested)
             {
                 var udpResult = await this._udpClient.ReceiveAsync();
-                byte[] buffer = udpResult.Buffer;
-                Frame frame;
-                if(buffer.Length == 3)
+                new Task(() =>
                 {
-                    frame = ProcessHeaderPackage(buffer);
-                }
-                else
-                {
-                    frame = ProcessPayloadPackage(buffer);
-                }
-                CheckFrameComplicity(frame);
+                    byte[] buffer = udpResult.Buffer;
+                    Frame frame;
+                    if (buffer.Length == 3)
+                    {
+                        frame = ProcessHeaderPackage(buffer);
+                    }
+                    else
+                    {
+                        frame = ProcessPayloadPackage(buffer);
+                    }
+                    CheckFrameComplicity(frame);
+                }).Start();
             }
         }
         private Frame ProcessPayloadPackage(byte[] buffer)
         {
             var packageOrder = buffer[0];
-            var existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
+            Frame existingFrame;
+            lock (_lock)
+            {
+                existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
+            }
             bool existsInCollection = existingFrame != null;
             if (!existsInCollection)
             {
@@ -69,13 +76,21 @@ namespace FireCast.Client.Network
 
             if (!existsInCollection)
             {
-                this._frames.Add(existingFrame);
+                lock (_lock)
+                {
+                    this._frames.Add(existingFrame);
+                }
             }
             return existingFrame;
         }
         private Frame ProcessHeaderPackage(byte[] buffer)
         {
-            var existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
+            Frame existingFrame;
+
+            lock (_lock)
+            {
+                existingFrame = _frames.FirstOrDefault(x => x.Signarute[0] == buffer[1] && x.Signarute[1] == buffer[2]);
+            }
             bool existsInCollection = existingFrame != null;
             if (!existsInCollection)
             {
@@ -99,13 +114,27 @@ namespace FireCast.Client.Network
 
             if (!existsInCollection)
             {
-                this._frames.Add(existingFrame);
+                lock (_lock)
+                {
+                    this._frames.Add(existingFrame);
+                }
             }
             return existingFrame;
         }
         private void CheckFrameComplicity(Frame frame)
         {
-            var completedPackages = this._frames.Where(x => x.IsFrameComplete());
+            List<Frame> completedPackages;
+            lock (_lock)
+            {
+                completedPackages = this._frames.Where(x => x.IsFrameComplete()).ToList();
+            }
+            foreach(var pckg in completedPackages)
+            {
+                lock (_lock)
+                {
+                    _frames.Remove(pckg);
+                }
+            }
             this?.OnFramesComposed.Invoke(this, completedPackages);
         }
     }

@@ -10,7 +10,7 @@ namespace FireCast.Server.Network
 {
     public class UserDatagramSenderManager : INetworkManager
     {
-        private const int MAximumUDP_PacketSize = 65535;
+        private const int MAximumUDP_PacketSize = 60000;
         private const int PackageHeaderLength = 3;
         private readonly Random _random;
         private readonly UdpClient _sender;
@@ -20,7 +20,6 @@ namespace FireCast.Server.Network
             this._random = new Random();
             this._sender = new UdpClient();
             this._iPEndPoint = new IPEndPoint(IPAddress.Parse(address), port);
-            this._sender.Connect(_iPEndPoint);
         }
 
         public async Task SendImage(byte[] bytesToSend)
@@ -28,7 +27,7 @@ namespace FireCast.Server.Network
             var packages = GetCipheredPAckages(bytesToSend);
             foreach(var package in packages)
             {
-                await _sender.SendAsync(package, package.Length);
+                await _sender.SendAsync(package, package.Length, _iPEndPoint);
             }
         }
 

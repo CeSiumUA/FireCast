@@ -23,6 +23,7 @@ namespace FireCast.Server
             {
                 var rawBytes = await _graphicsProvider.GetRawInstantImage();
                 await _networkManager.SendImage(rawBytes);
+                await Task.Delay(1000 / 60);
             }
         }
     }

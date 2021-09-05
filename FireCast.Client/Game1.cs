@@ -2,10 +2,15 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Color = Microsoft.Xna.Framework.Color;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace FireCast.Client
 {
@@ -33,6 +38,7 @@ namespace FireCast.Client
                     framesQuery.Enqueue(frame);
                 }
             };
+            this.Window.AllowUserResizing = true;
             base.Initialize();
         }
 
@@ -80,9 +86,24 @@ namespace FireCast.Client
         {
             var chunks = frame.PackageChunks.OrderBy(x => x.Order);
             byte[] image = new byte[chunks.Sum(x => x.Data.Length)];
-            using (MemoryStream memoryStream = new MemoryStream(image))
+            int lastIndex = 0;
+            foreach(var chunk in chunks)
             {
-                return Texture2D.FromStream(this.GraphicsDevice, memoryStream);
+                Array.Copy(chunk.Data, 0, image, lastIndex, chunk.Data.Length);
+                lastIndex += chunk.Data.Length;
+            }
+            Bitmap bitmap;
+            MemoryStream memoryStream = new MemoryStream(image);
+            try
+            {
+                bitmap = (Bitmap)Bitmap.FromStream(memoryStream);
+                memoryStream = new MemoryStream();
+                bitmap.Save(memoryStream, ImageFormat.Png);
+                return Texture2D.FromStream(_graphics.GraphicsDevice, memoryStream);
+            }
+            finally
+            {
+                memoryStream.Dispose();
             }
         }
     }
