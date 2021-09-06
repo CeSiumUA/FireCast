@@ -46,7 +46,7 @@ namespace FireCast.Server.Capture
             bitImage = new Bitmap(this.Width, this.Height);
             graphics = Graphics.FromImage(bitImage);
         }
-        public async Task<byte[]> GetRawInstantImage()
+        public byte[] GetRawInstantImage()
         {
             using (MemoryStream ms = new MemoryStream())
             {

@@ -11,6 +11,6 @@ namespace FireCast.Server.Capture
         int DefaultScreen { get; set; }
         int Height { get; set; }
         int Width { get; set; }
-        Task<byte[]> GetRawInstantImage();
+        byte[] GetRawInstantImage();
     }
 }

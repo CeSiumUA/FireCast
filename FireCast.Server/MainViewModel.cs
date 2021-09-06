@@ -15,7 +15,7 @@ namespace FireCast.Server
         private readonly INetworkManager _networkManager; 
         public MainViewModel()
         {
-            this._graphicsProvider = new WindowsGraphicsProvider();
+            this._graphicsProvider = new WinAPI_GraphicsProvider();
             this._networkManager = new UserDatagramSenderManager("127.0.0.1", 1488);
         }
         public async Task CaptureScreen()
@@ -26,7 +26,7 @@ namespace FireCast.Server
                 stopWatch.Restart();
                 while (true)
                 {
-                    var rawBytes = await _graphicsProvider.GetRawInstantImage();
+                    var rawBytes = _graphicsProvider.GetRawInstantImage();
                     await _networkManager.SendImage(rawBytes);
                     var mss = (1000 / 60) - (int)stopWatch.ElapsedMilliseconds;
                     await Task.Delay(mss < 0 ? 0 : mss);
