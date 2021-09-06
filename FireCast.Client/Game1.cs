@@ -19,7 +19,8 @@ namespace FireCast.Client
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private readonly INetworkReceiver _receiver;
-        private Frame activeFrame;
+        private Texture2D activeTexture;
+        private readonly Queue<Texture2D> textureQueue;
         private FrameBuffer FrameBuffer;
         public Game1()
         {
@@ -28,6 +29,7 @@ namespace FireCast.Client
             IsMouseVisible = true;
             FrameBuffer = new FrameBuffer();
             _receiver = new UdpReceiver("127.0.0.1", 1488);
+            textureQueue = new Queue<Texture2D>();
         }
 
         protected override void Initialize()
@@ -40,7 +42,18 @@ namespace FireCast.Client
                     FrameBuffer.AddToBufferQueue(bytes);
                 }
             }).Start();
-
+            new Task(() =>
+            {
+                while (true)
+                {
+                    var frame = FrameBuffer.ProcessBuffer();
+                    if(frame != null)
+                    {
+                        var texture = CreateTexture(frame);
+                        this.textureQueue.Enqueue(texture);
+                    }
+                }
+            }).Start();
             this.Window.AllowUserResizing = true;
             base.Initialize();
         }
@@ -57,7 +70,7 @@ namespace FireCast.Client
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            this.Window.Title = FrameBuffer.GetBufferLength().ToString();
+            this.Window.Title = $"{FrameBuffer.GetBufferLength()} {textureQueue.Count}";
 
             base.Update(gameTime);
         }
@@ -65,20 +78,21 @@ namespace FireCast.Client
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            var newFrame = FrameBuffer.ProcessBuffer();
-            if(newFrame != null)
+
+            if (textureQueue.Count > 0)
             {
-                activeFrame = newFrame;
+                activeTexture = textureQueue.Dequeue();
             }
-            if (activeFrame != null)
+
+            if (activeTexture != null)
             {
-                var texture = CreateTexture(activeFrame);
+                
 
                 _spriteBatch.Begin();
 
-                _spriteBatch.Draw(texture,
+                _spriteBatch.Draw(activeTexture,
                     new Rectangle(0, 0, _graphics.GraphicsDevice.Viewport.Width, _graphics.GraphicsDevice.Viewport.Height),
-                    new Rectangle(0, 0, texture.Width, texture.Height),
+                    new Rectangle(0, 0, activeTexture.Width, activeTexture.Height),
                     Color.White);
 
                 _spriteBatch.End();
@@ -97,9 +111,10 @@ namespace FireCast.Client
                 Array.Copy(chunk.Data, 0, image, lastIndex, chunk.Data.Length);
                 lastIndex += chunk.Data.Length;
             }
-            Texture2D texture2D = new Texture2D(this.GraphicsDevice, 2560, 1080);
-            texture2D.SetData(image);
-            return texture2D;
+            using (MemoryStream ms = new MemoryStream(image))
+            {
+                return Texture2D.FromStream(this.GraphicsDevice, ms);
+            }
         }
     }
 }

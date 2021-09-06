@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FireCast.Server.Network;
+using System.Diagnostics;
 
 namespace FireCast.Server
 {
@@ -19,12 +20,19 @@ namespace FireCast.Server
         }
         public async Task CaptureScreen()
         {
-            while (true)
+            new Task(async () =>
             {
-                var rawBytes = await _graphicsProvider.GetRawInstantImage();
-                await _networkManager.SendImage(rawBytes);
-                await Task.Delay(16);
-            }
+                Stopwatch stopWatch = new Stopwatch();
+                stopWatch.Restart();
+                while (true)
+                {
+                    var rawBytes = await _graphicsProvider.GetRawInstantImage();
+                    await _networkManager.SendImage(rawBytes);
+                    var mss = (1000 / 60) - (int)stopWatch.ElapsedMilliseconds;
+                    await Task.Delay(mss < 0 ? 0 : mss);
+                    stopWatch.Restart();
+                }
+            }).Start();
         }
     }
 }
