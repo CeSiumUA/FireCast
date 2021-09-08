@@ -40,6 +40,11 @@ namespace FireCast.Server.Capture
             this.DefaultScreen = 0;
             this.Height = Screen.AllScreens[DefaultScreen].Bounds.Height;
             this.Width = Screen.AllScreens[DefaultScreen].Bounds.Width;
+            System.Drawing.Imaging.Encoder encoder = System.Drawing.Imaging.Encoder.Quality;
+            EncoderParameter encoderParameter = new EncoderParameter(encoder, 100L);
+            encoderParameters = new EncoderParameters(1);
+            encoderParameters.Param[0] = encoderParameter;
+            imageCodecInfo = ImageCodecInfo.GetImageEncoders().First(x => x.FormatID == ImageFormat.Jpeg.Guid);
         }
         public void Initialize()
         {
@@ -52,7 +57,7 @@ namespace FireCast.Server.Capture
             {
                 if (bitImage == null || graphics == null) Initialize();
                 graphics?.CopyFromScreen(0, 0, 0, 0, new Size(this.Width, this.Height));
-                bitImage?.Save(ms, ImageFormat.Jpeg);
+                bitImage?.Save(ms, imageCodecInfo, encoderParameters);
                 return ms.ToArray();
             }
         }
@@ -61,5 +66,7 @@ namespace FireCast.Server.Capture
         private int defaultScreen = 0;
         private Bitmap? bitImage;
         private Graphics? graphics;
+        private ImageCodecInfo imageCodecInfo;
+        private EncoderParameters encoderParameters;
     }
 }
