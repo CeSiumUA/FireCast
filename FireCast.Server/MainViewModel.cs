@@ -62,8 +62,10 @@ namespace FireCast.Server
                 IsCaptureRunable = false;
                 while (!_captureCancellationToken.IsCancellationRequested)
                 {
-                    var rawBytes = _graphicsProvider.GetRawInstantImage();
-                    await _networkManager.SendImage(rawBytes);
+                    //var rawBytes = _graphicsProvider.GetRawInstantImage();
+                    var bitMap = _graphicsProvider.GetCapturedImage();
+                    await _networkManager.SendImage(bitMap);
+                    //await _networkManager.SendImage(rawBytes);
                     await Task.Delay(10);
                 }
                 IsCaptureCancellable = false;

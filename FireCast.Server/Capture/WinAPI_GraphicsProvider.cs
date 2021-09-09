@@ -62,6 +62,10 @@ namespace FireCast.Server.Capture
             return img;
         }
 
+        public Bitmap GetCapturedImage()
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class User32

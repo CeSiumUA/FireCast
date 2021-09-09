@@ -55,18 +55,26 @@ namespace FireCast.Server.Capture
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                if (bitImage == null || graphics == null) Initialize();
-                graphics?.CopyFromScreen(0, 0, 0, 0, new Size(this.Width, this.Height));
+                var bitMap = GetCapturedImage();
                 bitImage?.Save(ms, imageCodecInfo, encoderParameters);
                 return ms.ToArray();
             }
         }
+
+        public Bitmap GetCapturedImage()
+        {
+           
+            if (bitImage == null || graphics == null) Initialize();
+            graphics?.CopyFromScreen(0, 0, 0, 0, new Size(this.Width, this.Height));
+            return bitImage;
+        }
+
         private int height = 600;
         private int width = 800;
         private int defaultScreen = 0;
         private Bitmap? bitImage;
         private Graphics? graphics;
-        private ImageCodecInfo imageCodecInfo;
+        private ImageCodecInfo? imageCodecInfo;
         private EncoderParameters encoderParameters;
     }
 }

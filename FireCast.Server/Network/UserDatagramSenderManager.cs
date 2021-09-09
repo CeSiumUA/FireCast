@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -24,45 +25,24 @@ namespace FireCast.Server.Network
 
         public async Task SendImage(byte[] bytesToSend)
         {
-            var packages = GetCipheredPAckages(bytesToSend);
-            foreach(var package in packages)
+            var packages = ImageProcessor.GetCipheredPackages(bytesToSend, _random);
+            await SendByteArray(packages);
+        }
+
+        public async Task SendImage(Bitmap bitmap)
+        {
+            var packages = ImageProcessor.GetMappedImage(bitmap);
+            await SendByteArray(packages);
+        }
+
+        private async Task SendByteArray(IEnumerable<byte[]> bytesToSend)
+        {
+            foreach (var package in bytesToSend)
             {
                 await _sender.SendAsync(package, package.Length, _iPEndPoint);
             }
         }
 
-        private List<byte[]> GetCipheredPAckages(byte[] bytes)
-        {
-            var payloadLength = MAximumUDP_PacketSize - PackageHeaderLength;
-            int packagesCount = bytes.Length / payloadLength;
-            var remnant = bytes.Length % payloadLength;
-            packagesCount += remnant == 0 ? 0 : 1;
-            List<byte[]> packages = new List<byte[]>(packagesCount + 2);
-            byte[] guidBytes = new byte[2];
-            _random.NextBytes(guidBytes);
-            byte[] headerPackage = new byte[PackageHeaderLength];
-            headerPackage[0] = (byte)packagesCount;
-            Array.Copy(guidBytes, 0, headerPackage, 1, guidBytes.Length);
-            packages.Add(headerPackage);
-            for(int x = 0; x < packagesCount; x++)
-            {
-                var bytesToCopy = payloadLength;
-                if (remnant != 0 && x == packagesCount - 1)
-                {
-                    bytesToCopy = remnant;
-                }
-                byte[] package = new byte[bytesToCopy + PackageHeaderLength];
-                Array.Copy(headerPackage, 0, package, 0, PackageHeaderLength);
-                package[0] = (byte)x;
-                Array.Copy(bytes, x * payloadLength, package, PackageHeaderLength, bytesToCopy);
-                packages.Add(package);
-            }
-            byte[] tailPackage = new byte[PackageHeaderLength];
-            Array.Copy(headerPackage, 0, tailPackage, 0, PackageHeaderLength);
-            tailPackage[0] = 0;
-            packages.Add(tailPackage);
-            return packages;
-        }
         public void Dispose()
         {
             this._sender?.Close();
