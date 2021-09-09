@@ -28,7 +28,7 @@ namespace FireCast.Client
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
             FrameBuffer = new FrameBuffer();
-            _receiver = new UdpReceiver("127.0.0.1", 1488);
+            _receiver = new UdpReceiver(1488);
             textureQueue = new Queue<Texture2D>();
         }
 
@@ -61,8 +61,6 @@ namespace FireCast.Client
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
         }
 
         protected override void Update(GameTime gameTime)

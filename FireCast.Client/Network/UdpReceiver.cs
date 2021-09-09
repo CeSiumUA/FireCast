@@ -13,7 +13,7 @@ namespace FireCast.Client.Network
     {
         private readonly UdpClient _udpClient;
         private IPEndPoint remoteEndPoint;
-        public UdpReceiver(string ipAddress, int port)
+        public UdpReceiver(int port)
         {
             this._udpClient = new UdpClient(port);
         }
@@ -28,6 +28,6 @@ namespace FireCast.Client.Network
             var udpResult = await _udpClient.ReceiveAsync();
             this.remoteEndPoint = udpResult.RemoteEndPoint;
             return udpResult.Buffer;
-        }   
+        }
     }
 }
