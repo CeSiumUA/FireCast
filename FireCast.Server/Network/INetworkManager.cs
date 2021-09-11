@@ -11,6 +11,6 @@ namespace FireCast.Server.Network
     public interface INetworkManager : IDisposable
     {
         public Task SendImage(byte[] bytesToSend);
-        public Task SendImage(Bitmap bitmap);
+        public Task SendImage(Bitmap bitmap, List<Rectangle> rectangles);
     }
 }

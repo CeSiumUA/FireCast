@@ -11,6 +11,8 @@ namespace FireCast.Client.Network
         public byte[] Header { get; set; }
         public List<Chunk> PackageChunks = new List<Chunk>();
         public byte[] Tail { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
         public bool IsFrameComplete()
         {
             return (Chunks == PackageChunks.Count)

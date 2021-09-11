@@ -8,6 +8,7 @@ namespace FireCast.Client
     public class FrameBuffer
     {
         private readonly Queue<byte[]> bytesInBuffer;
+        private const int AdvancedHeaderLength = 11;
         private Frame frame;
         public FrameBuffer()
         {
@@ -29,7 +30,7 @@ namespace FireCast.Client
             if(bytesInBuffer.Count > 0)
             {
                 var bytesFrme = bytesInBuffer.Dequeue();
-                if (bytesFrme.Length == 3)
+                if (bytesFrme.Length == AdvancedHeaderLength)
                 {
                     ProcessHeaderPackage(bytesFrme);
                 }
@@ -55,9 +56,9 @@ namespace FireCast.Client
         {
             CheckFrameSignature(buffer);
 
-            byte[] payload = new byte[buffer.Length - 3];
+            byte[] payload = new byte[buffer.Length - AdvancedHeaderLength];
 
-            Array.Copy(buffer, 3, payload, 0, payload.Length);
+            Array.Copy(buffer, AdvancedHeaderLength, payload, 0, payload.Length);
 
             frame.PackageChunks.Add(new Chunk()
             {
@@ -74,6 +75,12 @@ namespace FireCast.Client
             {
                 frame.Chunks = buffer[0];
                 frame.Header = buffer;
+                byte[] widthBytes = new byte[4];
+                byte[] heightBytes = new byte[4];
+                Array.Copy(buffer, 3, widthBytes, 0, widthBytes.Length);
+                Array.Copy(buffer, 7, heightBytes, 0, heightBytes.Length);
+                frame.Width = BitConverter.ToInt32(widthBytes, 0);
+                frame.Height = BitConverter.ToInt32(heightBytes, 0);
             }
             else
             {

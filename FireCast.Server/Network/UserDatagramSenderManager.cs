@@ -30,9 +30,9 @@ namespace FireCast.Server.Network
             await SendByteArray(packages);
         }
 
-        public async Task SendImage(Bitmap bitmap)
+        public async Task SendImage(Bitmap bitmap, List<Rectangle> rectangles)
         {
-            var packages = ImageProcessor.GetMappedImage(bitmap, _random);
+            var packages = ImageProcessor.GetMappedImage(bitmap, _random, rectangles);
             await SendByteArray(packages);
         }
 

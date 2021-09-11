@@ -8,6 +8,7 @@ using FireCast.Server.Network;
 using System.Diagnostics;
 using System.Threading;
 using System.ComponentModel;
+using FireCast.Server.Processors;
 
 namespace FireCast.Server
 {
@@ -58,13 +59,13 @@ namespace FireCast.Server
             new Task(async () =>
             {
                 _captureCancellationToken = new CancellationTokenSource();
-
+                var rectangles = ImageProcessor.CropImage(2560, 1080);
                 IsCaptureRunable = false;
                 while (!_captureCancellationToken.IsCancellationRequested)
                 {
                     //var rawBytes = _graphicsProvider.GetRawInstantImage();
                     var bitMap = _graphicsProvider.GetCapturedImage();
-                    await _networkManager.SendImage(bitMap);
+                    await _networkManager.SendImage(bitMap, rectangles);
                     //await _networkManager.SendImage(rawBytes);
                     await Task.Delay(10);
                 }

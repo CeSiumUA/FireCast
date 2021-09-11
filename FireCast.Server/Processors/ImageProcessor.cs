@@ -15,9 +15,8 @@ namespace FireCast.Server.Processors
         public const int PackageHeaderLength = 3;
         public const int AdvancedPackageHeaderLength = 11;
 
-        public static List<byte[]> GetMappedImage(Bitmap bitmap, Random _random)
+        public static List<byte[]> GetMappedImage(Bitmap bitmap, Random _random, List<Rectangle> imageCrops)
         {
-            var imageCrops = CropImage(bitmap);
             var crops = GetCroppedImages(bitmap, imageCrops);
             var bytes = GetFramesBytes(crops, _random);
             return bytes;
@@ -130,12 +129,9 @@ namespace FireCast.Server.Processors
             }
             return bitmaps;
         }
-        private static List<Rectangle> CropImage(Bitmap bitmap)
+        public static List<Rectangle> CropImage(int width, int height)
         {
             List<Rectangle> rectangles = new List<Rectangle>();
-
-            var height = bitmap.Height;
-            var width = bitmap.Width;
 
             Rectangle singleRectangle;
 
