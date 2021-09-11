@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FireCast.Server.Processors;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -31,7 +32,7 @@ namespace FireCast.Server.Network
 
         public async Task SendImage(Bitmap bitmap)
         {
-            var packages = ImageProcessor.GetMappedImage(bitmap);
+            var packages = ImageProcessor.GetMappedImage(bitmap, _random);
             await SendByteArray(packages);
         }
 
