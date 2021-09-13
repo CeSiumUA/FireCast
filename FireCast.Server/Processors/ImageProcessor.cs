@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -101,12 +102,16 @@ namespace FireCast.Server.Processors
 
             foreach (var frame in frames)
             {
-                byte[] frameBytes;
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    frame.Bitmap.Save(ms, ImageFormat.Jpeg);
-                    frameBytes = ms.ToArray();
-                }
+                //byte[] frameBytes;
+                //using (MemoryStream ms = new MemoryStream())
+                //{
+                //    frame.Bitmap.Save(ms, ImageFormat.Jpeg);
+                //    frameBytes = ms.ToArray();
+                //}
+                var rawbytesCount = frame.Bitmap.Width * frame.Bitmap.Height * (Image.GetPixelFormatSize(frame.Bitmap.PixelFormat) / 8);
+                byte[] frameBytes = new byte[rawbytesCount];
+                BitmapData bitmapData = frame.Bitmap.LockBits(new Rectangle(0, 0, frame.Bitmap.Width, frame.Bitmap.Height), ImageLockMode.ReadOnly, frame.Bitmap.PixelFormat);
+                Marshal.Copy(bitmapData.Scan0, frameBytes, 0, rawbytesCount);
                 var bytes = GetCipheredCroppedPackages(frameBytes, frame.Width, frame.Height, _random);
                 bytesList.AddRange(bytes);
             }
